@@ -1,11 +1,12 @@
 import 'dart:convert';
 import 'dart:math';
 
-import 'package:flutter/foundation.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:poll_air/polish_comparator.dart';
 import 'package:poll_air/sensor.dart';
 import 'package:dartz/dartz.dart';
 import 'package:http/http.dart' as http;
-import 'package:rxdart/rxdart.dart';
 
 class Coordinates {
   final double longitude;
@@ -21,7 +22,7 @@ class Station {
   final int id;
   final String name;
   final Coordinates coordinates;
-  Option<List<Sensor>> sensors = none();
+  List<Sensor> sensors = [];
 
   Station({
     required this.id,
@@ -31,7 +32,7 @@ class Station {
 
   static Option<Station> fromJson(Map<String, dynamic> json) {
     final id = json['id'] == null ? null : json['id'] as int;
-    final name = json['stationName'];
+    var name = json['stationName'];
     final longitude =
         json['gegrLon'] == null ? null : double.parse(json['gegrLon']);
     final latitude =
@@ -42,7 +43,7 @@ class Station {
     }
     return some(Station(
         id: id!,
-        name: name,
+        name: name.toString().trim(),
         coordinates: Coordinates(
             longitude: toRadians(longitude!), latitude: toRadians(latitude!))));
   }
@@ -53,13 +54,18 @@ class Station {
     final ids = (jsonDecode(response.body) as List)
         .where((element) => element['id'] != null)
         .map((e) => e['id'] as int);
-    sensors = some(await Stream.fromIterable(ids)
+    sensors = await Stream.fromIterable(ids)
         .asyncMap((e) => fetchSensor(e))
         .where((e) => e.isSome())
         .map((e) => e.getOrElse(() => throw Null))
-        .toList());
+        .toList();
     return;
   }
+}
+
+class StationsUserData {
+  List<Station> allStations = [];
+  Option<Station> currentStation = none();
 }
 
 double toRadians(double degrees) {
@@ -79,22 +85,50 @@ Future<List<Station>> getAllStations() async {
   return [];
 }
 
-Future<Option<Station>> findNearestStation(Coordinates user) async {
-  final stations = await getAllStations();
-  if (stations.isEmpty) {
+Option<Station> findNearestStation(
+    List<Station> allStations, Coordinates user) {
+  if (allStations.isEmpty) {
     return none();
   }
   var minDistance = double.maxFinite;
-  Option<Station> minStation = none();
+  var minStation = allStations.first;
 
-  for (var station in stations) {
+  for (var station in allStations) {
     final currentDistance = distance(user, station.coordinates);
     if (currentDistance < minDistance) {
       minDistance = currentDistance;
-      minStation = some(station);
+      minStation = station;
     }
   }
-  return minStation;
+  return some(minStation);
+}
+
+Future<StationsUserData> getStationsData() async {
+  await resolveLoccationPermission();
+  final position = await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high);
+  var stationsData = StationsUserData();
+  stationsData.allStations = await getAllStations();
+  stationsData.allStations
+      .sort((a, b) => PolishComparator().compare(a.name, b.name));
+  stationsData.currentStation = findNearestStation(
+      stationsData.allStations,
+      Coordinates(
+          longitude: toRadians(position.longitude),
+          latitude: toRadians(position.latitude)));
+
+  return stationsData;
+}
+
+Future<void> resolveLoccationPermission() async {
+  if (await Permission.location.isGranted) {
+    return;
+  }
+  if (await Permission.location.request().isGranted == false) {
+    while (await Permission.location.isGranted == false) {
+      await openAppSettings();
+    }
+  }
 }
 
 double distance(Coordinates user, Coordinates station) {
