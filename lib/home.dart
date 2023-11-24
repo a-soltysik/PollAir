@@ -30,46 +30,78 @@ class HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Center(
       child: FutureBuilder<StationsUserData>(
-          future: _stations,
-          builder: (context, snapshot) {
-            if (snapshot.hasData) {
-              return Column(
+        future: _stations,
+        builder: (context, snapshot) {
+          if (snapshot.hasData) {
+            return Container(
+              color: Colors.lightBlue,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   DropdownButtonHideUnderline(
-                      child: DropdownButton2<String>(
-                    items: getDropDown(snapshot.data!),
-                    value: snapshot.data!.currentStation
-                        .fold(() => null, (station) => station.name),
-                    onChanged: (String? value) {
-                      setState(() {
-                        snapshot.data!.currentStation = dartz.some(snapshot
-                            .data!.allStations
-                            .firstWhere((element) => element.name == value));
-                      });
-                    },
-                  )),
+                    child: DropdownButton2<String>(
+                      items: getDropDown(snapshot.data!),
+                      value: snapshot.data!.currentStation
+                          .fold(() => null, (station) => station.name),
+                      onChanged: (String? value) {
+                        setState(() {
+                          snapshot.data!.currentStation = dartz.some(snapshot
+                              .data!.allStations
+                              .firstWhere((element) => element.name == value));
+                        });
+                      },
+                    ),
+                  ),
                   FutureBuilder<void>(
-                      future: snapshot.data!.currentStation.fold(
-                          () => null, (station) => station.supplySensors()),
-                      builder: (context, supplySnaphost) {
-                        if (supplySnaphost.connectionState ==
-                            ConnectionState.done) {
-                          const unit = 'µg/m³';
-                          return snapshot.data!.currentStation.fold(
-                              () => const CircularProgressIndicator(),
-                              (station) => Text(station.sensors
-                                  .map((sensor) =>
-                                      "${sensor.type}: ${sensor.data.first.value} $unit")
-                                  .join('\n')));
-                        } else {
-                          return const CircularProgressIndicator();
-                        }
-                      })
+                    future: snapshot.data!.currentStation
+                        .fold(() => null, (station) => station.supplySensors()),
+                    builder: (context, supplySnapshot) {
+                      if (supplySnapshot.connectionState ==
+                          ConnectionState.done) {
+                        const unit = 'µg/m³';
+                        return snapshot.data!.currentStation.fold(
+                          () => const CircularProgressIndicator(),
+                          (station) => Expanded(
+                            child: Center(
+                              child: ListView.builder(
+                                itemCount: station.sensors.length,
+                                itemBuilder: (BuildContext context, int index) {
+                                  var sensor = station.sensors[index];
+                                  return Card(
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10.0),
+                                    ),
+                                    margin: const EdgeInsets.all(8.0),
+                                    child: ListTile(
+                                      title: Align(
+                                        alignment: Alignment.center,
+                                        child: Text(
+                                          "${sensor.type}: ${sensor.data.first.value} $unit",
+                                          style: const TextStyle(
+                                            fontSize: 16.0,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        );
+                      } else {
+                        return const CircularProgressIndicator();
+                      }
+                    },
+                  ),
                 ],
-              );
-            }
-            return const CircularProgressIndicator();
-          }),
+              ),
+            );
+          }
+          return const CircularProgressIndicator();
+        },
+      ),
     );
   }
 }
