@@ -34,7 +34,7 @@ class HomePageState extends State<HomePage> {
         builder: (context, snapshot) {
           if (snapshot.hasData) {
             return Container(
-              color: Colors.lightBlue,
+              color: Colors.lightBlue.shade100,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
