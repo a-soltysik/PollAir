@@ -52,8 +52,21 @@ class _ChartPageState extends State<ChartPage> {
     );
   }
 
+  static const customGetTitle = _customGetTitle;
+
+  static Widget _customGetTitle(double value, TitleMeta meta) {
+    if (value % 2 == 0) {
+      return const Text('');
+    }
+    return Text(
+      '-${value.toInt()} h',
+      style: const TextStyle(fontSize: 12),
+    );
+  }
+
   Future<List<Column>> getCharts() async {
     final stations = await HomePageState.stations;
+    const double align_percent = 0.05;
     return stations.currentStation.fold(
       () => [],
       (station) => station.sensors
@@ -66,14 +79,53 @@ class _ChartPageState extends State<ChartPage> {
                   child: LayoutBuilder(
                     builder: (context, constraints) {
                       return BarChart(BarChartData(
-                          barGroups: getGroups(sensor),
-                          titlesData: const FlTitlesData(
-                              topTitles: AxisTitles(),
-                              bottomTitles: AxisTitles(
-                                  sideTitles: SideTitles(
-                                      showTitles: true,
-                                      interval: 2,
-                                      reservedSize: 25)))));
+                        alignment: BarChartAlignment.spaceEvenly,
+                        barTouchData: BarTouchData(
+                          touchTooltipData: BarTouchTooltipData(
+                              tooltipBgColor: Theme.of(context).cardTheme.color,
+                              tooltipPadding: const EdgeInsets.all(2),
+                              direction: TooltipDirection.top,
+                              fitInsideHorizontally: true,
+                              fitInsideVertically: true,
+                              rotateAngle: 0,
+                              getTooltipItem: (
+                                BarChartGroupData group,
+                                int groupIndex,
+                                BarChartRodData rod,
+                                int rodIndex,
+                              ) {
+                                return BarTooltipItem(
+                                    rod.toY.toString(),
+                                    const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 10));
+                              }),
+                          enabled: true,
+                        ),
+                        maxY: sensor.data
+                                .take(min(12, sensor.data.length))
+                                .map((e) => e.value)
+                                .reduce(max)
+                                .toDouble() *
+                            (1 + align_percent),
+                        minY: sensor.data
+                            .take(min(12, sensor.data.length))
+                            .map((e) => e.value)
+                            .reduce(min)
+                            .toDouble(),
+                        barGroups: getGroups(sensor),
+                        titlesData: const FlTitlesData(
+                          bottomTitles: AxisTitles(),
+                          topTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              reservedSize: 25,
+                              getTitlesWidget: customGetTitle,
+                            ),
+                          ),
+                        ),
+                      ));
                     },
                   ),
                 ),
@@ -93,9 +145,28 @@ class _ChartPageState extends State<ChartPage> {
         .map(
           (e) => BarChartGroupData(
             x: min(12, sensor.data.length) - data.indexOf(e) - 1,
-            barRods: [BarChartRodData(toY: e.value)],
+            barRods: [
+              BarChartRodData(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(6),
+                    topRight: Radius.circular(6),
+                  ),
+                  width: 20,
+                  toY: e.value,
+                  color: getColor(Random().nextDouble(),
+                      0.8) // to mark the critical threshold later
+                  )
+            ],
           ),
         )
         .toList();
+  }
+
+  Color getColor(double value, double threshold) {
+    // Customize color based on your criteria
+    if (value < threshold) {
+      return Colors.tealAccent.shade700;
+    }
+    return Colors.red;
   }
 }
