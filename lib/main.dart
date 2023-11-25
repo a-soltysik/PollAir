@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:poll_air/chart.dart';
 import 'package:poll_air/home.dart';
+import 'package:poll_air/settings.dart';
 
 void main() {
   runApp(const App());
@@ -32,7 +33,11 @@ class PageManager extends StatefulWidget {
 
 class _PageManagerState extends State<PageManager> {
   var _selectedIndex = 0;
-  static const List<Widget> _widgetOptions = <Widget>[HomePage(), ChartPage()];
+  static const List<Widget> _widgetOptions = <Widget>[
+    HomePage(),
+    ChartPage(),
+    SettingsPage()
+  ];
 
   void _onItemTapped(int index) {
     setState(() {
@@ -58,6 +63,10 @@ class _PageManagerState extends State<PageManager> {
           BottomNavigationBarItem(
             icon: Icon(Icons.show_chart),
             label: 'Charts',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.settings),
+            label: 'Settings',
           ),
         ],
         currentIndex: _selectedIndex,

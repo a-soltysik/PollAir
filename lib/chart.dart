@@ -4,6 +4,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:poll_air/home.dart';
 import 'package:poll_air/sensor.dart';
+import 'package:poll_air/settings.dart';
 
 class ChartPage extends StatefulWidget {
   const ChartPage({super.key});
@@ -66,66 +67,80 @@ class _ChartPageState extends State<ChartPage> {
 
   Future<List<Column>> getCharts() async {
     final stations = await HomePageState.stations;
-    const double align_percent = 0.05;
+    const double alignPercent = 0.05;
     return stations.currentStation.fold(
       () => [],
       (station) => station.sensors
           .map(
             (sensor) => Column(
               children: [
-                Text(sensor.type),
+                Text(sensor.compound.name),
                 AspectRatio(
                   aspectRatio: 2,
                   child: LayoutBuilder(
                     builder: (context, constraints) {
                       return BarChart(BarChartData(
-                        alignment: BarChartAlignment.spaceEvenly,
-                        barTouchData: BarTouchData(
-                          touchTooltipData: BarTouchTooltipData(
-                              tooltipBgColor: Theme.of(context).cardTheme.color,
-                              tooltipPadding: const EdgeInsets.all(2),
-                              direction: TooltipDirection.top,
-                              fitInsideHorizontally: true,
-                              fitInsideVertically: true,
-                              rotateAngle: 0,
-                              getTooltipItem: (
-                                BarChartGroupData group,
-                                int groupIndex,
-                                BarChartRodData rod,
-                                int rodIndex,
-                              ) {
-                                return BarTooltipItem(
-                                    rod.toY.toString(),
-                                    const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 10));
-                              }),
-                          enabled: true,
-                        ),
-                        maxY: sensor.data
-                                .take(min(12, sensor.data.length))
-                                .map((e) => e.value)
-                                .reduce(max)
-                                .toDouble() *
-                            (1 + align_percent),
-                        minY: sensor.data
-                            .take(min(12, sensor.data.length))
-                            .map((e) => e.value)
-                            .reduce(min)
-                            .toDouble(),
-                        barGroups: getGroups(sensor),
-                        titlesData: const FlTitlesData(
-                          bottomTitles: AxisTitles(),
-                          topTitles: AxisTitles(
-                            sideTitles: SideTitles(
-                              showTitles: true,
-                              reservedSize: 25,
-                              getTitlesWidget: customGetTitle,
-                            ),
+                          alignment: BarChartAlignment.spaceEvenly,
+                          barTouchData: BarTouchData(
+                            touchTooltipData: BarTouchTooltipData(
+                                tooltipBgColor:
+                                    Theme.of(context).cardTheme.color,
+                                tooltipPadding: const EdgeInsets.all(2),
+                                direction: TooltipDirection.top,
+                                fitInsideHorizontally: true,
+                                fitInsideVertically: true,
+                                rotateAngle: 0,
+                                getTooltipItem: (
+                                  BarChartGroupData group,
+                                  int groupIndex,
+                                  BarChartRodData rod,
+                                  int rodIndex,
+                                ) {
+                                  return BarTooltipItem(
+                                      rod.toY.toString(),
+                                      const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 10));
+                                }),
+                            enabled: true,
                           ),
-                        ),
-                      ));
+                          //maxY: sensor.data
+                          //    .take(min(12, sensor.data.length))
+                          //    .map((e) => e.value)
+                          //    .reduce(max)
+                          //    .toDouble(),
+                          barGroups: getGroups(sensor),
+                          titlesData: FlTitlesData(
+                            bottomTitles: const AxisTitles(),
+                            topTitles: const AxisTitles(
+                              sideTitles: SideTitles(
+                                showTitles: true,
+                                reservedSize: 25,
+                                getTitlesWidget: customGetTitle,
+                              ),
+                            ),
+                            leftTitles: AxisTitles(),
+                            rightTitles: AxisTitles(
+                                sideTitles: SideTitles(
+                              showTitles: true,
+                              reservedSize: 60,
+                              getTitlesWidget: (value, meta) {
+                                Widget axisTitle =
+                                    Text(value.toStringAsFixed(2));
+                                if (value == meta.max) {
+                                  final remainder =
+                                      value % meta.appliedInterval;
+                                  if (remainder != 0.0 &&
+                                      remainder / meta.appliedInterval < 0.5) {
+                                    axisTitle = const SizedBox.shrink();
+                                  }
+                                }
+                                return SideTitleWidget(
+                                    axisSide: meta.axisSide, child: axisTitle);
+                              },
+                            )),
+                          )));
                     },
                   ),
                 ),
@@ -151,11 +166,11 @@ class _ChartPageState extends State<ChartPage> {
                     topLeft: Radius.circular(6),
                     topRight: Radius.circular(6),
                   ),
-                  width: 20,
-                  toY: e.value,
-                  color: getColor(Random().nextDouble(),
-                      0.8) // to mark the critical threshold later
-                  )
+                  width: 10,
+                  toY: SettingsPageState.settings.first
+                      ? e.value
+                      : e.value / sensor.compound.max * 100,
+                  color: getColor(e.value, sensor.compound.max))
             ],
           ),
         )

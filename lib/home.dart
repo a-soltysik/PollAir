@@ -1,5 +1,6 @@
 import 'package:dartz/dartz.dart' as dartz;
 import 'package:flutter/material.dart';
+import 'package:poll_air/settings.dart';
 import 'package:poll_air/station.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
 
@@ -59,6 +60,7 @@ class HomePageState extends State<HomePage> {
                       if (supplySnapshot.connectionState ==
                           ConnectionState.done) {
                         const unit = 'µg/m³';
+                        const percent = '%';
                         return snapshot.data!.currentStation.fold(
                           () => const CircularProgressIndicator(),
                           (station) => Expanded(
@@ -76,12 +78,13 @@ class HomePageState extends State<HomePage> {
                                       title: Align(
                                         alignment: Alignment.center,
                                         child: Text(
-                                          "${sensor.type}: ${sensor.data.first.value} $unit",
-                                          style: const TextStyle(
-                                            fontSize: 16.0,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
+                                            SettingsPageState.settings.first
+                                                ? "${sensor.compound.name}: ${sensor.data.first.value.toStringAsFixed(2)} $unit"
+                                                : "${sensor.compound.name}: ${((sensor.data.first.value / sensor.compound.max) * 100.0).toStringAsFixed(2)} $percent",
+                                            style: TextStyle(
+                                                fontSize: 16.0,
+                                                fontWeight: FontWeight.bold,
+                                                color: sensor.getColor())),
                                       ),
                                     ),
                                   );
