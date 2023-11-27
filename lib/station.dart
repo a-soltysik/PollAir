@@ -22,6 +22,7 @@ class Station {
   final int id;
   final String name;
   final Coordinates coordinates;
+  String index = '';
   List<Sensor> sensors = [];
 
   Station({
@@ -48,10 +49,10 @@ class Station {
             longitude: toRadians(longitude!), latitude: toRadians(latitude!))));
   }
 
-  Future<void> supplySensors() async {
-    final response = await http
+  Future<void> supplyAdditionalData() async {
+    final sensorResp = await http
         .get(Uri.https('api.gios.gov.pl', 'pjp-api/rest/station/sensors/$id'));
-    final ids = (jsonDecode(response.body) as List)
+    final ids = (jsonDecode(sensorResp.body) as List)
         .where((element) => element['id'] != null)
         .map((e) => e['id'] as int);
     sensors = await Stream.fromIterable(ids)
@@ -59,6 +60,12 @@ class Station {
         .where((e) => e.isSome())
         .map((e) => e.getOrElse(() => throw Null))
         .toList();
+
+    final indexResp = await http
+        .get(Uri.https('api.gios.gov.pl', 'pjp-api/rest/aqindex/getIndex/$id'));
+    final indexLevel = jsonDecode(indexResp.body)['stIndexLevel'];
+    final indexName = indexLevel == null ? null : indexLevel['indexLevelName'];
+    index = indexName ?? '';
     return;
   }
 }

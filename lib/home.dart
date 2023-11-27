@@ -54,43 +54,31 @@ class HomePageState extends State<HomePage> {
                     ),
                   ),
                   FutureBuilder<void>(
-                    future: snapshot.data!.currentStation
-                        .fold(() => null, (station) => station.supplySensors()),
+                    future: snapshot.data!.currentStation.fold(() => null,
+                        (station) => station.supplyAdditionalData()),
                     builder: (context, supplySnapshot) {
                       if (supplySnapshot.connectionState ==
                           ConnectionState.done) {
-                        const unit = 'µg/m³';
-                        const percent = '%';
                         return snapshot.data!.currentStation.fold(
                           () => const CircularProgressIndicator(),
                           (station) => Expanded(
                             child: Center(
-                              child: ListView.builder(
-                                itemCount: station.sensors.length,
-                                itemBuilder: (BuildContext context, int index) {
-                                  var sensor = station.sensors[index];
-                                  return Card(
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10.0),
-                                    ),
-                                    margin: const EdgeInsets.all(8.0),
-                                    child: ListTile(
-                                      title: Align(
+                                child: ListView.builder(
+                              itemCount: station.sensors.length + 1,
+                              itemBuilder: (BuildContext context, int index) {
+                                return Card(
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10.0),
+                                  ),
+                                  margin: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                                  child: ListTile(
+                                    title: Align(
                                         alignment: Alignment.center,
-                                        child: Text(
-                                            SettingsPageState.settings.first
-                                                ? "${sensor.compound.name}: ${sensor.data.first.value.toStringAsFixed(2)} $unit"
-                                                : "${sensor.compound.name}: ${((sensor.data.first.value / sensor.compound.max) * 100.0).toStringAsFixed(2)} $percent",
-                                            style: TextStyle(
-                                                fontSize: 16.0,
-                                                fontWeight: FontWeight.bold,
-                                                color: sensor.getColor())),
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
+                                        child: getTextByIndex(station, index)),
+                                  ),
+                                );
+                              },
+                            )),
                           ),
                         );
                       } else {
@@ -107,4 +95,31 @@ class HomePageState extends State<HomePage> {
       ),
     );
   }
+}
+
+Text getTextByIndex(Station station, int index) {
+  if (index == 0) {
+    return getIndexText(station);
+  }
+  return getSensorText(station, index - 1);
+}
+
+Text getSensorText(Station station, int index) {
+  final sensor = station.sensors[index];
+  const unit = 'µg/m³';
+  const percent = '%';
+
+  return Text(
+      SettingsPageState.settings.first
+          ? "${sensor.compound.name}: ${sensor.data.first.value.toStringAsFixed(2)} $unit"
+          : "${sensor.compound.name}: ${((sensor.data.first.value / sensor.compound.max) * 100.0).toStringAsFixed(2)} $percent",
+      style: TextStyle(
+          fontSize: 16.0,
+          fontWeight: FontWeight.bold,
+          color: sensor.getColor()));
+}
+
+Text getIndexText(Station station) {
+  return Text('Indeks jakości powietrza: ${station.index}',
+      style: const TextStyle(fontSize: 16.0, fontWeight: FontWeight.bold));
 }
